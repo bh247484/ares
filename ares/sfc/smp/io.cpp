@@ -7,10 +7,77 @@ auto SMP::portRead(n2 port) const -> n8 {
 }
 
 auto SMP::portWrite(n2 port, n8 data) -> void {
+  // 1. Update hardware state (Always do this first)
   if(port == 0) io.apu0 = data;
   if(port == 1) io.apu1 = data;
   if(port == 2) io.apu2 = data;
   if(port == 3) io.apu3 = data;
+
+  // Enable scene detection.
+  return;
+
+  // 2. Filter: We only care about control signals on Port 0
+  if (port != 0) return;
+
+  // --- N-SPC PROTOCOL MONITOR ---
+
+  // CASE 1: RESET / START LOAD ($FF)
+  if (data == 0xFF) {
+       isUploading = true;
+       stagingHash = 0xFFFFFFFF; // Reset CRC
+       lastPort0 = 0xFF;
+       return;
+  }
+
+  // CASE 2: SEQUENTIAL UPLOAD
+  // Detects incrementing counters (including FF->00 wrap)
+  if (data == (n8)(lastPort0 + 1)) {
+      if (isUploading) {
+        stagingHash = crc32_update(stagingHash, io.apu1);
+      }
+      lastPort0 = data;
+      return; 
+  }
+
+  // CASE 3: NON-SEQUENTIAL (Commands or Handshakes)
+  if (data != lastPort0) {
+      
+      // Handshake Filter:
+      // If we are "uploading" but have 0 data bytes (when stagingHash == 0xFFFFFFFF), this is protocol noise (e.g., $CC ready signal).
+      // In short, we may have initiated the upload but commands that are not actually data could be sent first.
+      if (isUploading && stagingHash == 0xFFFFFFFF) {
+        // If the noise is $00, that is actually the first valid data byte (byte 0).
+        // And lastPort0 could be $FF (Reset) or $CC (Handshake) and neither $FF + 1 nor $CC + 1 is equal to 0x00.
+        // So neither would read sequential data. Everything thereafter (meaning after 0x00) should be sequential, however.
+          if (data == 0x00) {
+            stagingHash = crc32_update(stagingHash, io.apu1);
+          }
+          lastPort0 = data;
+          return;
+      }
+      
+      lastPort0 = data;
+      
+      // A. END OF UPLOAD: Resolve the Bank Hash
+      if (isUploading) {
+          if (stagingHash != 0xFFFFFFFF) {
+              activeBankHash = stagingHash;
+              printf("[MEM] NEW BANK INSTALLED: %08X\n", activeBankHash);
+          } else {
+              // Valid reset occurred, but no data was sent. Bank remains unchanged.
+              printf("[MEM] RESIDENT BANK PRESERVED: %08X\n", activeBankHash);
+          }
+          isUploading = false; 
+      }
+
+      // B. FILTER ACKS: Ignore '00' acknowledgments during normal playback
+      if (data == 0x00) return;
+
+      // C. LOG SCENE SIGNATURE
+      // This is the "Fingerprint" used to map specific songs/scenes
+      printf(">>> SCENE: [%08X] - CMD:%02X [P1:%02X P2:%02X P3:%02X]\n", 
+             activeBankHash, data, io.apu1, io.apu2, io.apu3);
+  }
 }
 
 inline auto SMP::readIO(n16 address) -> n8 {
@@ -129,10 +196,43 @@ inline auto SMP::writeIO(n16 address, n8 data) -> void {
     io.dspAddress = data;
     break;
 
-  case 0xf3:  //DSPDATA
-    if(io.dspAddress.bit(7)) break;  //0x80-0xff are read-only mirrors of 0x00-0x7f
+  case 0xf3: // DSPDATA
+  {
+    if(io.dspAddress.bit(7)) break; // Read-only mirrors
+
+    // Constants for DSP Registers
+    static const uint8_t DSP_KON = 0x4C; // Key On
+    static const uint8_t DSP_EON = 0x4D; // Echo Enable
+    static const uint8_t DSP_SRC = 0x04; // Source Number (offset)
+
+    // --- SFX INTERCEPTOR ---
+    if (io.dspAddress == DSP_KON) {
+      // Iterate through all 8 voices to see which ones are being keyed ON
+      for (int v = 0; v < 8; v++) {
+        if (data & (1 << v)) {
+          // 1. Identify the Instrument (Source Number)
+          // Register math: (Voice * 0x10) + 0x04
+          uint8_t sampleID = dsp.read((v * 0x10) + DSP_SRC);
+
+          // 2. Identify the Context (Echo Enable)
+          // We check the Echo Enable (EON) bit for this specific voice
+          uint8_t echoFlags = dsp.read(DSP_EON);
+          // bool isEchoOn = echoFlags & (1 << v);
+          bool isEchoOn = false;
+
+          // 3. Heuristic Filtering
+          // SFX usually run "dry" (No Echo), Music usually runs "wet" (Echo On).
+          if (!isEchoOn) {
+            printf(">>> SFX TRIGGER: [Inst: %02X]\n", sampleID);
+          }
+        }
+      }
+    }
+    // -----------------------
+
     dsp.write(io.dspAddress, data);
     break;
+  }
 
   case 0xf4:  //CPUIO0
     synchronize(cpu);

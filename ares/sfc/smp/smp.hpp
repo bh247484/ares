@@ -68,6 +68,20 @@ private:
     n8 aux5;
   } io;
 
+  uint32_t activeBankHash = 0;   // The hash of the music currently residing in RAM
+  uint32_t stagingHash = 0;      // The hash we are currently building during a load
+  bool isUploading = false;      // Are we in the middle of a data stream?
+  uint8_t lastPort0;             // Used to detect sequential data, i.e. (lastPort0 + 1).
+
+  auto crc32_update(uint32_t crc, uint8_t data) -> uint32_t {
+  crc = crc ^ data;
+  for (int j = 0; j < 8; j++) {
+    if (crc & 1) crc = (crc >> 1) ^ 0xEDB88320;
+    else crc >>= 1;
+  }
+  return crc;
+}
+
   //memory.cpp
   auto readRAM(n16 address) -> n8;
   auto writeRAM(n16 address, n8 data) -> void;

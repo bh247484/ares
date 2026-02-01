@@ -1,4 +1,5 @@
 //Sony CXP1100Q-1
+#include <array>
 
 struct SMP : SPC700, Thread {
   Node::Object node;
@@ -74,13 +75,42 @@ private:
   uint8_t lastPort0;             // Used to detect sequential data, i.e. (lastPort0 + 1).
 
   auto crc32_update(uint32_t crc, uint8_t data) -> uint32_t {
-  crc = crc ^ data;
-  for (int j = 0; j < 8; j++) {
-    if (crc & 1) crc = (crc >> 1) ^ 0xEDB88320;
-    else crc >>= 1;
+    crc = crc ^ data;
+    for (int j = 0; j < 8; j++) {
+      if (crc & 1) crc = (crc >> 1) ^ 0xEDB88320;
+      else crc >>= 1;
+    }
+    return crc;
   }
-  return crc;
-}
+
+  // Constants for DSP Registers
+  static const uint8_t DSP_KON   = 0x4C; // Key On
+  static const uint8_t DSP_EON   = 0x4D; // Echo Enable
+  static const uint8_t DSP_VOL_L = 0x00; // Volume Left
+  static const uint8_t DSP_VOL_R = 0x01; // Volume Right
+  static const uint8_t DSP_P_L   = 0x02; // Pitch Low
+  static const uint8_t DSP_P_H   = 0x03; // Pitch High
+  static const uint8_t DSP_SRC   = 0x04; // Source Number
+  static const uint8_t DSP_ADSR1 = 0x05; // ADSR 1
+  static const uint8_t DSP_ADSR2 = 0x06; // ADSR 2
+  static const uint8_t DSP_GAIN  = 0x07; // Gain
+
+
+static inline std::array<bool, 256> blockedSamples = [] {
+    std::array<bool, 256> b{}; // Initializes all to false
+    
+    // Add IDs you want to silence here
+    b[0x03] = true;
+    b[0x07] = true;
+    b[0x10] = true;
+    b[0x12] = true;
+    b[0x14] = true;
+    b[0x22] = true;
+    b[0x0A] = true;
+    b[0x1C] = true;
+    
+    return b;
+}();
 
   //memory.cpp
   auto readRAM(n16 address) -> n8;

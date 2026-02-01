@@ -200,31 +200,45 @@ inline auto SMP::writeIO(n16 address, n8 data) -> void {
   {
     if(io.dspAddress.bit(7)) break; // Read-only mirrors
 
-    // Constants for DSP Registers
-    static const uint8_t DSP_KON = 0x4C; // Key On
-    static const uint8_t DSP_EON = 0x4D; // Echo Enable
-    static const uint8_t DSP_SRC = 0x04; // Source Number (offset)
-
     // --- SFX INTERCEPTOR ---
     if (io.dspAddress == DSP_KON) {
       // Iterate through all 8 voices to see which ones are being keyed ON
       for (int v = 0; v < 8; v++) {
+        // Check if this specific voice bit is set in the data being written
         if (data & (1 << v)) {
-          // 1. Identify the Instrument (Source Number)
+          // Base Register Offset for this voice (Voice * 0x10)
+          uint8_t voiceOffset = v * 0x10;
+
+
+          // Identify the Instrument (Source Number)
           // Register math: (Voice * 0x10) + 0x04
-          uint8_t sampleID = dsp.read((v * 0x10) + DSP_SRC);
+          uint8_t sampleID = dsp.read(voiceOffset + DSP_SRC);
+
+          // Filter Check: Skip if in blocklist
+          // Used to denoise console logs when manually identifying sfx in real time during gameplay.
+          if (blockedSamples[sampleID]) continue;
 
           // 2. Identify the Context (Echo Enable)
           // We check the Echo Enable (EON) bit for this specific voice
           uint8_t echoFlags = dsp.read(DSP_EON);
-          // bool isEchoOn = echoFlags & (1 << v);
-          bool isEchoOn = false;
+          bool isEchoOn = echoFlags & (1 << v);
 
-          // 3. Heuristic Filtering
-          // SFX usually run "dry" (No Echo), Music usually runs "wet" (Echo On).
-          if (!isEchoOn) {
-            printf(">>> SFX TRIGGER: [Inst: %02X]\n", sampleID);
-          }
+          // PITCH: The 14-bit pitch value. 
+          uint8_t pitchL = dsp.read(voiceOffset + DSP_P_L);
+          uint8_t pitchH = dsp.read(voiceOffset + DSP_P_H);
+          uint16_t pitch = pitchL | (pitchH << 8);
+
+          // ENVELOPE: ADSR and GAIN
+          uint8_t adsr1 = dsp.read(voiceOffset + DSP_ADSR1);
+          uint8_t adsr2 = dsp.read(voiceOffset + DSP_ADSR2);
+          uint8_t gain  = dsp.read(voiceOffset + DSP_GAIN);
+          
+          // Envelope Mode Heuristic:
+          // If ADSR1 bit 7 is 0, the channel is using GAIN (Direct Volume) mode.
+          bool useADSR = adsr1 & 0x80;
+
+          printf(">>> SFX: [ID:%02X] [Pitch:%04X] [ADSR:%02X%02X] [Gain:%02X] [Echo:%d]\n", 
+               sampleID, pitch, adsr1, adsr2, gain, isEchoOn);
         }
       }
     }

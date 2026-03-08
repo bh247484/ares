@@ -4,6 +4,9 @@
 struct SMP : SPC700, Thread {
   Node::Object node;
 
+  SMP();
+  ~SMP();
+
   struct Debugger {
     //debugger.cpp
     auto load(Node::Object) -> void;
@@ -96,21 +99,19 @@ private:
   static const uint8_t DSP_GAIN  = 0x07; // Gain
 
 
-static inline std::array<bool, 256> blockedSamples = [] {
-    std::array<bool, 256> b{}; // Initializes all to false
-    
-    // Add IDs you want to silence here
-    b[0x03] = true;
-    b[0x07] = true;
-    b[0x10] = true;
-    b[0x12] = true;
-    b[0x14] = true;
-    b[0x22] = true;
-    b[0x0A] = true;
-    b[0x1C] = true;
-    
-    return b;
-}();
+  static inline std::array<bool, 256> blockedSamples = [] {
+      std::array<bool, 256> b{}; // Initializes all to false
+      
+      // Add IDs you want to silence here
+      // b[0x03] = true;
+      
+      return b;
+  }();
+
+  // MittelVec Objects
+  MittelVec::AudioContext mittelVecContext;
+  MittelVec::Engine engine;
+  MittelVec::AudioGraph& graph;
 
   //memory.cpp
   auto readRAM(n16 address) -> n8;

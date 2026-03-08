@@ -1,8 +1,29 @@
+#define MITTELVEC_IMPLEMENTATION
+#include "mittelvec/mittelvec.h"
+
 #include <sfc/sfc.hpp>
+
+const int BUFFER_SIZE = 512;
+const int NUM_CHANNELS = 1;
+const float SAMPLE_RATE = 44100.0f;
 
 namespace ares::SuperFamicom {
 
 SMP smp;
+
+SMP::SMP() :
+  mittelVecContext{ BUFFER_SIZE, NUM_CHANNELS, SAMPLE_RATE },
+  engine(mittelVecContext),
+  graph(engine.graph)
+{
+  engine.start();
+}
+
+SMP::~SMP() {
+  printf("smp deinitialized\n");
+  engine.stop();
+}
+
 #include "memory.cpp"
 #include "io.cpp"
 #include "timing.cpp"

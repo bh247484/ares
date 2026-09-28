@@ -86,6 +86,10 @@ private:
     return crc;
   }
 
+  // Debug flags for logging
+  const bool LOG_SFX = true;
+  const bool LOG_SCENES = false;
+
   // Constants for DSP Registers
   static const uint8_t DSP_KON   = 0x4C; // Key On
   static const uint8_t DSP_EON   = 0x4D; // Echo Enable

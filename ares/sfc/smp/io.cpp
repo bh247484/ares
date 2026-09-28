@@ -62,10 +62,10 @@ auto SMP::portWrite(n2 port, n8 data) -> void {
       if (isUploading) {
           if (stagingHash != 0xFFFFFFFF) {
               activeBankHash = stagingHash;
-              printf("[MEM] NEW BANK INSTALLED: %08X\n", activeBankHash);
+              if (LOG_SCENES) printf("[MEM] NEW BANK INSTALLED: %08X\n", activeBankHash);
           } else {
               // Valid reset occurred, but no data was sent. Bank remains unchanged.
-              printf("[MEM] RESIDENT BANK PRESERVED: %08X\n", activeBankHash);
+              if (LOG_SCENES) printf("[MEM] RESIDENT BANK PRESERVED: %08X\n", activeBankHash);
           }
           isUploading = false; 
       }
@@ -75,7 +75,7 @@ auto SMP::portWrite(n2 port, n8 data) -> void {
 
       // C. LOG SCENE SIGNATURE
       // This is the "Fingerprint" used to map specific songs/scenes
-      printf(">>> SCENE: [%08X] - CMD:%02X [P1:%02X P2:%02X P3:%02X]\n", 
+      if (LOG_SCENES) printf(">>> SCENE: [%08X] - CMD:%02X [P1:%02X P2:%02X P3:%02X]\n", 
              activeBankHash, data, io.apu1, io.apu2, io.apu3);
   }
 }
@@ -237,7 +237,7 @@ inline auto SMP::writeIO(n16 address, n8 data) -> void {
           // If ADSR1 bit 7 is 0, the channel is using GAIN (Direct Volume) mode.
           bool useADSR = adsr1 & 0x80;
 
-          printf(">>> SFX: [ID:%02X] [Pitch:%04X] [ADSR:%02X%02X] [Gain:%02X] [Echo:%d]\n", 
+          if (LOG_SFX) printf(">>> SFX: [ID:%02X] [Pitch:%04X] [ADSR:%02X%02X] [Gain:%02X] [Echo:%d]\n", 
                sampleID, pitch, adsr1, adsr2, gain, isEchoOn);
         }
       }

@@ -87,8 +87,8 @@ private:
   }
 
   // Debug flags for logging
-  const bool LOG_SFX = true;
-  const bool LOG_SCENES = false;
+  const bool LOG_SFX = false;
+  const bool LOG_SCENES = true;
 
   // Constants for DSP Registers
   static const uint8_t DSP_KON   = 0x4C; // Key On
@@ -107,7 +107,11 @@ private:
       std::array<bool, 256> b{}; // Initializes all to false
       
       // Add IDs you want to silence here
-      // b[0x03] = true;
+      // crateria bg noises
+      b[0x0B] = true;
+      b[0x18] = true;
+      b[0x19] = true;
+      b[0x1A] = true;
       
       return b;
   }();

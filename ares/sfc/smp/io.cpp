@@ -13,9 +13,6 @@ auto SMP::portWrite(n2 port, n8 data) -> void {
   if(port == 2) io.apu2 = data;
   if(port == 3) io.apu3 = data;
 
-  // Enable scene detection.
-  return;
-
   // 2. Filter: We only care about control signals on Port 0
   if (port != 0) return;
 

@@ -26,6 +26,7 @@ SMP::~SMP() {
 
 #include "memory.cpp"
 #include "io.cpp"
+#include "interceptor.cpp"
 #include "timing.cpp"
 #include "debugger.cpp"
 #include "serialization.cpp"

@@ -72,12 +72,42 @@ private:
     n8 aux5;
   } io;
 
-  uint32_t activeBankHash = 0;   // The hash of the music currently residing in RAM
-  uint32_t stagingHash = 0;      // The hash we are currently building during a load
-  bool isUploading = false;      // Are we in the middle of a data stream?
-  uint8_t lastPort0;             // Used to detect sequential data, i.e. (lastPort0 + 1).
+  // Debug flags for logging
+  const bool LOG_SFX = true;
+  const bool LOG_SCENES = true;
 
-  auto crc32_update(uint32_t crc, uint8_t data) -> uint32_t {
+  // Constants for DSP Registers
+  struct DSPReg {
+    static const uint8_t VOL_L = 0x00; // Volume Left
+    static const uint8_t VOL_R = 0x01; // Volume Right
+    static const uint8_t P_L   = 0x02; // Pitch Low
+    static const uint8_t P_H   = 0x03; // Pitch High
+    static const uint8_t SRC   = 0x04; // Source Number
+    static const uint8_t ADSR1 = 0x05; // ADSR 1
+    static const uint8_t ADSR2 = 0x06; // ADSR 2
+    static const uint8_t GAIN  = 0x07; // Gain
+    static const uint8_t KON   = 0x4C; // Key On
+    static const uint8_t EON   = 0x4D; // Echo Enable
+  };
+
+  struct SceneDetector {
+    uint32_t activeBankHash = 0;   // The hash of the music currently residing in RAM
+    uint32_t stagingHash = 0;      // The hash we are currently building during a load
+    bool isUploading = false;      // Are we in the middle of a data stream?
+    uint8_t lastPort0 = 0;         // Used to detect sequential data, i.e. (lastPort0 + 1).
+  } sceneDetector;
+
+  struct VoiceInfo {
+    uint8_t index;
+    uint8_t sampleID;
+    uint16_t pitch;
+    uint8_t adsr1;
+    uint8_t adsr2;
+    uint8_t gain;
+    bool echo;
+  };
+
+  static inline auto crc32_update(uint32_t crc, uint8_t data) -> uint32_t {
     crc = crc ^ data;
     for (int j = 0; j < 8; j++) {
       if (crc & 1) crc = (crc >> 1) ^ 0xEDB88320;
@@ -85,23 +115,6 @@ private:
     }
     return crc;
   }
-
-  // Debug flags for logging
-  const bool LOG_SFX = false;
-  const bool LOG_SCENES = true;
-
-  // Constants for DSP Registers
-  static const uint8_t DSP_KON   = 0x4C; // Key On
-  static const uint8_t DSP_EON   = 0x4D; // Echo Enable
-  static const uint8_t DSP_VOL_L = 0x00; // Volume Left
-  static const uint8_t DSP_VOL_R = 0x01; // Volume Right
-  static const uint8_t DSP_P_L   = 0x02; // Pitch Low
-  static const uint8_t DSP_P_H   = 0x03; // Pitch High
-  static const uint8_t DSP_SRC   = 0x04; // Source Number
-  static const uint8_t DSP_ADSR1 = 0x05; // ADSR 1
-  static const uint8_t DSP_ADSR2 = 0x06; // ADSR 2
-  static const uint8_t DSP_GAIN  = 0x07; // Gain
-
 
   static inline std::array<bool, 256> blockedSamples = [] {
       std::array<bool, 256> b{}; // Initializes all to false
@@ -120,6 +133,13 @@ private:
   MittelVec::AudioContext mittelVecContext;
   MittelVec::Engine engine;
   MittelVec::AudioGraph& graph;
+
+  // Interceptor & Audio Hooks
+  auto detectScene(n2 port, n8 data) -> void;
+  auto inspectVoice(uint8_t voiceIndex) -> VoiceInfo;
+  auto interceptVoiceKeyOn(n8 data) -> void;
+  auto onBankChange(uint32_t bankHash) -> void;
+  auto onVoiceTrigger(const VoiceInfo& voice) -> void;
 
   //memory.cpp
   auto readRAM(n16 address) -> n8;

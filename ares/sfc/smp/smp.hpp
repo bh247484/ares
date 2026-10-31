@@ -133,6 +133,9 @@ private:
   MittelVec::AudioContext mittelVecContext;
   MittelVec::Engine engine;
   MittelVec::AudioGraph& graph;
+  std::unique_ptr<MittelVec::SamplePack> samplePack;
+  std::unique_ptr<MittelVec::MusicCueOrchestrator> musicOrchestrator;
+  uint32_t currentMusicBankHash = 0;
 
   // Interceptor & Audio Hooks
   auto detectScene(n2 port, n8 data) -> void;

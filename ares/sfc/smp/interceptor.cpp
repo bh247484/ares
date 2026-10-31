@@ -127,9 +127,48 @@ auto SMP::interceptVoiceKeyOn(n8 data) -> void {
 }
 
 auto SMP::onBankChange(uint32_t bankHash) -> void {
-  // Hook for MittelVec MusicCue triggering
+  if (bankHash == currentMusicBankHash) {
+    if (LOG_SCENES) printf("[MittelVec] Redundant bank hash %08X, cue already playing\n", bankHash);
+    return;
+  }
+
+  char hashSlug[16];
+  snprintf(hashSlug, sizeof(hashSlug), "%08X", bankHash);
+
+  if (!musicOrchestrator) {
+    printf("[MittelVec Error] musicOrchestrator is null when triggering cue: %s\n", hashSlug);
+    return;
+  }
+
+  bool cueFound = false;
+  for (const auto& cue : metroidMusicCues) {
+    if (cue.slug == hashSlug) {
+      cueFound = true;
+      break;
+    }
+  }
+
+  if (cueFound) {
+    printf("[MittelVec] Triggering music cue: %s\n", hashSlug);
+    musicOrchestrator->playCue(hashSlug);
+    currentMusicBankHash = bankHash;
+  } else {
+    if (LOG_SCENES) printf("[MittelVec] No music cue mapped for scene bank hash: %s\n", hashSlug);
+  }
 }
 
 auto SMP::onVoiceTrigger(const VoiceInfo& voice) -> void {
-  // Hook for MittelVec SFX triggering
+  char slug[32];
+  snprintf(slug, sizeof(slug), "%02X:%04X", voice.sampleID, voice.pitch);
+
+  if (!samplePack) {
+    printf("[MittelVec Error] samplePack is null when triggering SFX: %s\n", slug);
+    return;
+  }
+
+  if (samplePack->samplers.count(slug) > 0) {
+    samplePack->triggerSample(slug);
+  } else {
+    if (LOG_SFX) printf("[MittelVec] No sample mapped in samplePack for slug: %s\n", slug);
+  }
 }

@@ -7,6 +7,8 @@ const int BUFFER_SIZE = 512;
 const int NUM_CHANNELS = 1;
 const float SAMPLE_RATE = 44100.0f;
 
+#include "mittelvec/game-maps.h"
+
 namespace ares::SuperFamicom {
 
 SMP smp;
@@ -17,6 +19,28 @@ SMP::SMP() :
   graph(engine.graph)
 {
   engine.start();
+
+  // Resolve MittelVec asset paths:
+  // 1. Try relative to application directory (or bundle)
+  // 2. Try user data directory (~/Library/Application Support/ares/...)
+  // 3. Fallback to current working directory development path
+  string sfxPath = "ares/sfc/smp/mittelvec/sfx/";
+  string musicPath = "ares/sfc/smp/mittelvec/music-cues/";
+
+  if (directory::exists({Path::program(), "sfx/"})) {
+    sfxPath = {Path::program(), "sfx/"};
+  } else if (directory::exists({Path::userData(), "ares/sfx/"})) {
+    sfxPath = {Path::userData(), "ares/sfx/"};
+  }
+
+  if (directory::exists({Path::program(), "music-cues/"})) {
+    musicPath = {Path::program(), "music-cues/"};
+  } else if (directory::exists({Path::userData(), "ares/music-cues/"})) {
+    musicPath = {Path::userData(), "ares/music-cues/"};
+  }
+
+  samplePack = std::make_unique<MittelVec::SamplePack>(graph, metroidSamplePack, (std::string)sfxPath);
+  musicOrchestrator = std::make_unique<MittelVec::MusicCueOrchestrator>(graph, metroidMusicCues, (std::string)musicPath);
 }
 
 SMP::~SMP() {

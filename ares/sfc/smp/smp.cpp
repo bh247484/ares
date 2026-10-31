@@ -13,6 +13,17 @@ namespace ares::SuperFamicom {
 
 SMP smp;
 
+static inline auto resolveResourcePath(string relDevPath, string resourceName, bool isDirectory) -> string {
+  if (isDirectory) {
+    if (directory::exists({Path::program(), resourceName})) return {Path::program(), resourceName};
+    if (directory::exists({Path::userData(), "ares/", resourceName})) return {Path::userData(), "ares/", resourceName};
+  } else {
+    if (file::exists({Path::program(), resourceName})) return {Path::program(), resourceName};
+    if (file::exists({Path::userData(), "ares/", resourceName})) return {Path::userData(), "ares/", resourceName};
+  }
+  return relDevPath;
+}
+
 SMP::SMP() :
   mittelVecContext{ BUFFER_SIZE, NUM_CHANNELS, SAMPLE_RATE },
   engine(mittelVecContext),
@@ -20,27 +31,14 @@ SMP::SMP() :
 {
   engine.start();
 
-  // Resolve MittelVec asset paths:
-  // 1. Try relative to application directory (or bundle)
-  // 2. Try user data directory (~/Library/Application Support/ares/...)
-  // 3. Fallback to current working directory development path
-  string sfxPath = "ares/sfc/smp/mittelvec/sfx/";
-  string musicPath = "ares/sfc/smp/mittelvec/music-cues/";
-
-  if (directory::exists({Path::program(), "sfx/"})) {
-    sfxPath = {Path::program(), "sfx/"};
-  } else if (directory::exists({Path::userData(), "ares/sfx/"})) {
-    sfxPath = {Path::userData(), "ares/sfx/"};
-  }
-
-  if (directory::exists({Path::program(), "music-cues/"})) {
-    musicPath = {Path::program(), "music-cues/"};
-  } else if (directory::exists({Path::userData(), "ares/music-cues/"})) {
-    musicPath = {Path::userData(), "ares/music-cues/"};
-  }
+  string sfxPath = resolveResourcePath("ares/sfc/smp/mittelvec/sfx/", "sfx/", true);
+  string musicPath = resolveResourcePath("ares/sfc/smp/mittelvec/music-cues/", "music-cues/", true);
+  debugConfigPath = resolveResourcePath("ares/sfc/smp/debug-config.bml", "debug-config.bml", false);
 
   samplePack = std::make_unique<MittelVec::SamplePack>(graph, metroidSamplePack, (std::string)sfxPath);
   musicOrchestrator = std::make_unique<MittelVec::MusicCueOrchestrator>(graph, metroidMusicCues, (std::string)musicPath);
+
+  loadDebugConfig();
 }
 
 SMP::~SMP() {
@@ -67,6 +65,8 @@ auto SMP::unload() -> void {
 }
 
 auto SMP::main() -> void {
+  pollDebugConfig();
+
   if(r.wait) return instructionWait();
   if(r.stop) return instructionStop();
 

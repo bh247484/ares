@@ -72,9 +72,17 @@ private:
     n8 aux5;
   } io;
 
-  // Debug flags for logging
-  const bool LOG_SFX = true;
-  const bool LOG_SCENES = true;
+  // Debug flags for logging (hot-reloadable via debug-config.bml)
+  bool LOG_SFX = true;
+  bool LOG_SCENES = true;
+  double updateIntervalSeconds = 0.25;
+  string debugConfigPath;
+  uint64_t debugConfigTimestamp = 0;
+  uint32_t debugConfigCounter = 0;
+  uint32_t debugConfigInstructionLimit = 250'000;
+
+  auto pollDebugConfig() -> void;
+  auto loadDebugConfig() -> void;
 
   // Constants for DSP Registers
   struct DSPReg {

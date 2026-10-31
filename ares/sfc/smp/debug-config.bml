@@ -1,0 +1,14 @@
+// MittelVec Debug Configuration (Hot-Reloadable BML)
+// Edit and save this file while Ares is running to update settings live.
+
+debug
+  LOG_SFX: true
+  LOG_SCENES: true
+  updateIntervalSeconds: 0.25
+
+  // Blocked samples (one per line, space/comma separated, or multiple lines)
+  blocked
+    :0B
+    :18
+    :19
+    :1A

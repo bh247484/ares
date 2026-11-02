@@ -16,6 +16,8 @@ struct DSP : Thread {
   n8 apuram[64_KiB];
   n8 registers[128];
 
+  const bool MUTE_EMU_AUDIO = true;
+
   auto mute() const -> bool { return mainvol.mute; }
 
   //dsp.cpp

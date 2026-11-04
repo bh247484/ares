@@ -13,15 +13,13 @@ namespace ares::SuperFamicom {
 
 SMP smp;
 
-static inline auto resolveResourcePath(string relDevPath, string resourceName, bool isDirectory) -> string {
-  if (isDirectory) {
-    if (directory::exists({Path::program(), resourceName})) return {Path::program(), resourceName};
-    if (directory::exists({Path::userData(), "ares/", resourceName})) return {Path::userData(), "ares/", resourceName};
-  } else {
-    if (file::exists({Path::program(), resourceName})) return {Path::program(), resourceName};
-    if (file::exists({Path::userData(), "ares/", resourceName})) return {Path::userData(), "ares/", resourceName};
+static inline auto resolveResourcePath(string resource) -> string {
+  if (directory::exists({Path::program(), resource})) {
+    return {Path::program(), resource};
+  } else if (directory::exists({Path::userData(), "ares/", resource})) {
+    return {Path::userData(), "ares/", resource};
   }
-  return relDevPath;
+  return {"ares/sfc/smp/mittelvec/", resource};
 }
 
 SMP::SMP() :
@@ -31,14 +29,11 @@ SMP::SMP() :
 {
   engine.start();
 
-  string sfxPath = resolveResourcePath("ares/sfc/smp/mittelvec/sfx/", "sfx/", true);
-  string musicPath = resolveResourcePath("ares/sfc/smp/mittelvec/music-cues/", "music-cues/", true);
-  debugConfigPath = resolveResourcePath("ares/sfc/smp/debug-config.bml", "debug-config.bml", false);
+  string sfxPath = resolveResourcePath("sfx/");
+  string musicPath = resolveResourcePath("music-cues/");
 
   samplePack = std::make_unique<MittelVec::SamplePack>(graph, metroidSamplePack, (std::string)sfxPath);
   musicOrchestrator = std::make_unique<MittelVec::MusicCueOrchestrator>(graph, metroidMusicCues, (std::string)musicPath);
-
-  loadDebugConfig();
 }
 
 SMP::~SMP() {
@@ -65,8 +60,6 @@ auto SMP::unload() -> void {
 }
 
 auto SMP::main() -> void {
-  pollDebugConfig();
-
   if(r.wait) return instructionWait();
   if(r.stop) return instructionStop();
 

@@ -72,17 +72,9 @@ private:
     n8 aux5;
   } io;
 
-  // Debug flags for logging (hot-reloadable via debug-config.bml)
-  bool LOG_SFX = true;
-  bool LOG_SCENES = true;
-  double updateIntervalSeconds = 0.25;
-  string debugConfigPath;
-  uint64_t debugConfigTimestamp = 0;
-  uint32_t debugConfigCounter = 0;
-  uint32_t debugConfigInstructionLimit = 250'000;
-
-  auto pollDebugConfig() -> void;
-  auto loadDebugConfig() -> void;
+  // Debug flags for logging
+  const bool LOG_SFX = true;
+  const bool LOG_SCENES = true;
 
   // Constants for DSP Registers
   struct DSPReg {
@@ -124,17 +116,17 @@ private:
     return crc;
   }
 
+  // Sized to 256 to cover all possible 8-bit sample source IDs from DSP_SRC ($00-$FF)
   static inline std::array<bool, 256> blockedSamples = [] {
-      std::array<bool, 256> b{}; // Initializes all to false
-      
-      // Add IDs you want to silence here
-      // crateria bg noises
-      b[0x0B] = true;
-      b[0x18] = true;
-      b[0x19] = true;
-      b[0x1A] = true;
-      
-      return b;
+    std::array<bool, 256> b{}; // Initializes all to false
+    
+    // Add IDs you want to silence here
+    // crateria bg noises
+    // b[0x0B] = true;
+    // b[0x18] = true;
+    // b[0x19] = true;
+    // b[0x1A] = true;
+    return b;
   }();
 
   // MittelVec Objects

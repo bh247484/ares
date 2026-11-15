@@ -190,6 +190,10 @@ auto DSP::tick() -> void {
 }
 
 auto DSP::sample(i16 left, i16 right) -> void {
+  if (MUTE_EMU_AUDIO) {
+    stream->frame(0.0, 0.0);
+    return;
+  }
   stream->frame(left / 32768.0, right / 32768.0);
 }
 

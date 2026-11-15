@@ -7,10 +7,14 @@ auto SMP::portRead(n2 port) const -> n8 {
 }
 
 auto SMP::portWrite(n2 port, n8 data) -> void {
+  // 1. Update hardware state (Always do this first)
   if(port == 0) io.apu0 = data;
   if(port == 1) io.apu1 = data;
   if(port == 2) io.apu2 = data;
   if(port == 3) io.apu3 = data;
+
+  // 2. Intercept audio memory changes and scene fingerprints
+  detectScene(port, data);
 }
 
 inline auto SMP::readIO(n16 address) -> n8 {
@@ -131,6 +135,11 @@ inline auto SMP::writeIO(n16 address, n8 data) -> void {
 
   case 0xf3:  //DSPDATA
     if(io.dspAddress.bit(7)) break;  //0x80-0xff are read-only mirrors of 0x00-0x7f
+
+    if(io.dspAddress == DSPReg::KON) {
+      interceptVoiceKeyOn(data);
+    }
+
     dsp.write(io.dspAddress, data);
     break;
 

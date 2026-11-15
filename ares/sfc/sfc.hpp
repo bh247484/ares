@@ -4,6 +4,7 @@
 #include <ares/ares.hpp>
 #include <span>
 #include <vector>
+#include "smp/mittelvec/mittelvec.h"
 
 #include <component/processor/arm7tdmi/arm7tdmi.hpp>
 #include <component/processor/gsu/gsu.hpp>
